@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import contextmanager
-import functools as ft
+import functools
 import json
 import os
 from typing import Any
@@ -340,11 +340,13 @@ async def client_session_proxy(hass: ha.HomeAssistant) -> ClientSession:
         url = URL(str_or_url)
         fp = os.path.join(
             os.path.dirname(__file__),
-            f"fixtures/proxy/{url.host}{url.path}{'.json' if url.host == 'api.github.com' else ''}",
+            f"fixtures/proxy/{url.host}{url.path}",
+            f".json" if url.host == "api.github.com" else "",
         )
         print(f"Using fixture {fp} for request to {url.host}")
 
-        if (resp := response_mocker.get(str_or_url)) is not None:
+        resp = response_mocker.get(str_or_url)
+        if resp is not None:
             if resp.exception:
                 raise resp.exception
             return resp
