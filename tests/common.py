@@ -2,40 +2,56 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import contextmanager
-from contextvars import ContextVar
 import functools as ft
 import json as json_func
 import os
-from typing import Any, Iterable, Mapping
+from collections.abc import Iterable, Mapping
+from contextlib import contextmanager
+from contextvars import ContextVar
+from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
 
+import homeassistant.util.dt as date_util
+import homeassistant.util.uuid as uuid_util
+import pytest
 from aiohttp import ClientSession, ClientWebSocketResponse
 from aiohttp.typedefs import StrOrURL
 from awesomeversion import AwesomeVersion
-from homeassistant import auth, bootstrap, config_entries, core as ha, config as ha_config
-from homeassistant.auth import auth_store, models as auth_models
+from homeassistant import auth, bootstrap, config_entries
+from homeassistant import config as ha_config
+from homeassistant import core as ha
+from homeassistant.auth import auth_store
+from homeassistant.auth import models as auth_models
 from homeassistant.const import (
     EVENT_HOMEASSISTANT_CLOSE,
     EVENT_HOMEASSISTANT_STOP,
+)
+from homeassistant.const import (
     __version__ as HAVERSION,
 )
 from homeassistant.helpers import (
     area_registry as ar,
+)
+from homeassistant.helpers import (
     device_registry as dr,
+)
+from homeassistant.helpers import (
     entity,
-    entity_registry as er,
-    issue_registry as ir,
-    restore_state as rs,
     storage,
+)
+from homeassistant.helpers import (
+    entity_registry as er,
+)
+from homeassistant.helpers import (
+    issue_registry as ir,
+)
+from homeassistant.helpers import (
+    restore_state as rs,
 )
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.json import ExtendedJSONEncoder
 from homeassistant.setup import async_setup_component
-import homeassistant.util.dt as date_util
 from homeassistant.util.unit_system import METRIC_SYSTEM
-import homeassistant.util.uuid as uuid_util
-import pytest
 from yarl import URL
 
 from custom_components.hacs.base import HacsBase
@@ -47,15 +63,17 @@ from custom_components.hacs.utils.logger import LOGGER
 _LOGGER = LOGGER
 TOKEN = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 INSTANCES = []
-REQUEST_CONTEXT: ContextVar[pytest.FixtureRequest] = ContextVar("request_context", default=None)
+REQUEST_CONTEXT: ContextVar[pytest.FixtureRequest] = ContextVar(
+    "request_context", default=None
+)
 
-IGNORED_BASE_FILES = set([
-        "/config/automations.yaml",
-        "/config/configuration.yaml",
-        "/config/scenes.yaml",
-        "/config/scripts.yaml",
-        "/config/secrets.yaml",
-    ])
+IGNORED_BASE_FILES = {
+    "/config/automations.yaml",
+    "/config/configuration.yaml",
+    "/config/scenes.yaml",
+    "/config/scripts.yaml",
+    "/config/secrets.yaml",
+}
 
 
 def safe_json_dumps(data: dict | list) -> str:
@@ -67,7 +85,9 @@ def safe_json_dumps(data: dict | list) -> str:
     )
 
 
-def recursive_remove_key(data: dict[str, Any], to_remove: Iterable[str]) -> dict[str, Any]:
+def recursive_remove_key(
+    data: dict[str, Any], to_remove: Iterable[str]
+) -> dict[str, Any]:
     if not isinstance(data, (Mapping, list)):
         return data
 
@@ -215,7 +235,9 @@ async def async_test_home_assistant(loop, tmpdir):
     hass.data[bootstrap.DATA_REGISTRIES_LOADED] = None
 
     hass.config_entries = config_entries.ConfigEntries(hass, {})
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, hass.config_entries._async_shutdown)
+    hass.bus.async_listen_once(
+        EVENT_HOMEASSISTANT_STOP, hass.config_entries._async_shutdown
+    )
 
     hass.state = ha.CoreState.running
     await async_setup_component(hass, "homeassistant", {})
@@ -275,24 +297,30 @@ def mock_storage(data=None):
         """Mock version of write data."""
         _LOGGER.info("Writing data to %s: %s", store.key, data_to_write)
         # To ensure that the data can be serialized
-        data[store.key] = json_func.loads(json_func.dumps(data_to_write, cls=store._encoder))
+        data[store.key] = json_func.loads(
+            json_func.dumps(data_to_write, cls=store._encoder)
+        )
 
     async def mock_remove(store):
         """Remove data."""
         data.pop(store.key, None)
 
-    with patch(
-        "homeassistant.helpers.storage.Store._async_load",
-        side_effect=mock_async_load,
-        autospec=True,
-    ), patch(
-        "homeassistant.helpers.storage.Store._write_data",
-        side_effect=mock_write_data,
-        autospec=True,
-    ), patch(
-        "homeassistant.helpers.storage.Store.async_remove",
-        side_effect=mock_remove,
-        autospec=True,
+    with (
+        patch(
+            "homeassistant.helpers.storage.Store._async_load",
+            side_effect=mock_async_load,
+            autospec=True,
+        ),
+        patch(
+            "homeassistant.helpers.storage.Store._write_data",
+            side_effect=mock_write_data,
+            autospec=True,
+        ),
+        patch(
+            "homeassistant.helpers.storage.Store.async_remove",
+            side_effect=mock_remove,
+            autospec=True,
+        ),
     ):
         yield data
 
@@ -303,14 +331,12 @@ class MockOwner(auth_models.User):
     def __init__(self):
         """Initialize mock user."""
         super().__init__(
-            **{
-                "is_owner": True,
-                "is_active": True,
-                "name": "Mocked Owner User",
-                "system_generated": False,
-                "groups": [],
-                "perm_lookup": None,
-            }
+            is_owner=True,
+            is_active=True,
+            name="Mocked Owner User",
+            system_generated=False,
+            groups=[],
+            perm_lookup=None,
         )
 
     @staticmethod
@@ -332,7 +358,9 @@ class MockConfigEntry(config_entries.ConfigEntry):
         if AwesomeVersion(HAVERSION) >= "2023.10.0":
             hass.config_entries._domain_index.setdefault(self.domain, []).append(self)
         else:
-            hass.config_entries._domain_index.setdefault(self.domain, []).append(self.entry_id)
+            hass.config_entries._domain_index.setdefault(self.domain, []).append(
+                self.entry_id
+            )
 
 
 class WSClient:
@@ -359,7 +387,9 @@ class WSClient:
 
             clientsession.detach()
 
-        self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_close_websession)
+        self.hass.bus.async_listen_once(
+            EVENT_HOMEASSISTANT_STOP, _async_close_websession
+        )
 
         self.client = await clientsession.ws_connect(
             "ws://localhost:8123/api/websocket", timeout=1, autoclose=True
@@ -379,7 +409,9 @@ class WSClient:
     async def receive_json(self) -> dict[str, Any]:
         return await self.client.receive_json()
 
-    async def send_and_receive_json(self, type: str, payload: dict[str, Any]) -> dict[str, Any]:
+    async def send_and_receive_json(
+        self, type: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
         await self.send_json(type=type, payload=payload)
         return await self.client.receive_json()
 
@@ -562,10 +594,13 @@ def create_config_entry(
         )
 
 
-async def setup_integration(hass: ha.HomeAssistant, config_entry: MockConfigEntry) -> None:
+async def setup_integration(
+    hass: ha.HomeAssistant, config_entry: MockConfigEntry
+) -> None:
     mock_session = await client_session_proxy(hass)
     with patch(
-        "homeassistant.helpers.aiohttp_client.async_get_clientsession", return_value=mock_session
+        "homeassistant.helpers.aiohttp_client.async_get_clientsession",
+        return_value=mock_session,
     ):
         hass.data.pop("custom_components", None)
         config_entry.add_to_hass(hass)
