@@ -274,7 +274,9 @@ def snapshots(snapshot: Snapshot) -> SnapshotFixture:
             safe_json_dumps(
                 recursive_remove_key(
                     {
-                        "directory": sorted(f for f in downloaded if f not in IGNORED_BASE_FILES),
+                        "directory": sorted(
+                            f for f in downloaded if f not in IGNORED_BASE_FILES
+                        ),
                         "data": data,
                         "hacs": {
                             "system": asdict(hacs.system),
@@ -303,7 +305,8 @@ async def proxy_session(hass: HomeAssistant) -> Generator:
     """Fixture for a proxy_session."""
     mock_session = await client_session_proxy(hass)
     with patch(
-        "homeassistant.helpers.aiohttp_client.async_get_clientsession", return_value=mock_session
+        "homeassistant.helpers.aiohttp_client.async_get_clientsession",
+        return_value=mock_session,
     ):
         yield
 
@@ -339,7 +342,9 @@ def response_mocker(proxy_session: Generator) -> ResponseMocker:
 
 @pytest_asyncio.fixture
 async def setup_integration(hass: HomeAssistant) -> None:
-    await common_setup_integration(hass, create_config_entry(options={"experimental": True}))
+    await common_setup_integration(
+        hass, create_config_entry(options={"experimental": True})
+    )
 
 
 def pytest_sessionfinish(session: pytest.Session, exitstatus: int):
