@@ -49,13 +49,13 @@ TOKEN = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 INSTANCES = []
 REQUEST_CONTEXT: ContextVar[pytest.FixtureRequest] = ContextVar("request_context", default=None)
 
-IGNORED_BASE_FILES = set([
-        "/config/automations.yaml",
-        "/config/configuration.yaml",
-        "/config/scenes.yaml",
-        "/config/scripts.yaml",
-        "/config/secrets.yaml",
-    ])
+IGNORED_BASE_FILES = {
+    "/config/automations.yaml",
+    "/config/configuration.yaml",
+    "/config/scenes.yaml",
+    "/config/scripts.yaml",
+    "/config/secrets.yaml",
+}
 
 
 def safe_json_dumps(data: dict | list) -> str:
@@ -303,15 +303,15 @@ class MockOwner(auth_models.User):
     def __init__(self):
         """Initialize mock user."""
         super().__init__(
-            **{
-                "is_owner": True,
-                "is_active": True,
-                "name": "Mocked Owner User",
-                "system_generated": False,
-                "groups": [],
-                "perm_lookup": None,
-            }
-        )
+        **{
+            "is_owner": True,
+            "is_active": True,
+            "name": "Mocked Owner User",
+            "system_generated": False,
+            "groups": [],
+            "perm_lookup": None,
+        }
+    )
 
     @staticmethod
     def create(hass: ha.HomeAssistant):
@@ -444,7 +444,10 @@ class ProxyClientSession(ClientSession):
             return resp
 
         url = URL(str_or_url)
-        fixture_file = f"fixtures/proxy/{url.host}{url.path}{'.json' if url.host in ('api.github.com', 'data-v2.hacs.xyz') and not url.path.endswith('.json') else ''}"
+        fixture_file = (
+            f"fixtures/proxy/{url.host}{url.path}"
+            f"{'.json' if url.host in ('api.github.com', 'data-v2.hacs.xyz') and not url.path.endswith('.json') else ''}"
+        )
         fp = os.path.join(
             os.path.dirname(__file__),
             fixture_file,
@@ -496,7 +499,10 @@ async def client_session_proxy(hass: ha.HomeAssistant) -> ClientSession:
             return resp
 
         url = URL(str_or_url)
-        fixture_file = f"fixtures/proxy/{url.host}{url.path}{'.json' if url.host in ('api.github.com', 'data-v2.hacs.xyz') and not url.path.endswith('.json') else ''}"
+        fixture_file = (
+            f"fixtures/proxy/{url.host}{url.path}"
+            f"{'.json' if url.host in ('api.github.com', 'data-v2.hacs.xyz') and not url.path.endswith('.json') else ''}"
+        )
         fp = os.path.join(
             os.path.dirname(__file__),
             fixture_file,
