@@ -7,6 +7,7 @@ from contextvars import ContextVar
 import functools as ft
 import json as json_func
 import os
+import pytest
 from typing import Any, Iterable, Mapping
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -35,8 +36,6 @@ from homeassistant.setup import async_setup_component
 import homeassistant.util.dt as date_util
 from homeassistant.util.unit_system import METRIC_SYSTEM
 import homeassistant.util.uuid as uuid_util
-import pytest
-from yarl import URL
 
 from custom_components.hacs.base import HacsBase
 from custom_components.hacs.const import DOMAIN
@@ -49,10 +48,7 @@ TOKEN = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 INSTANCES = []
 REQUEST_CONTEXT: ContextVar[pytest.FixtureRequest] = ContextVar("request_context", default=None)
 
-IGNORED_BASE_FILES = set([
-        "/config/automations.yaml",
-        "/config/configuration.yaml",
-        "/config/scenes.yaml",
+IGNORED_BASE_FILES = {="/config/automations.yaml", "/config/configuration.yaml", "/config/scenes.yaml"}
         "/config/scripts.yaml",
         "/config/secrets.yaml",
     ])
