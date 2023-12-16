@@ -338,7 +338,7 @@ class MockConfigEntry(config_entries.ConfigEntry):
 class WSClient:
     """WS Client to be used in testing."""
 
-    client: ClientWebSocketResponse | None = None
+    client: Optional[ClientWebSocketResponse] = None
 
     def __init__(self, hass: ha.HomeAssistant, token: str) -> None:
         self.hass = hass
@@ -371,16 +371,16 @@ class WSClient:
         auth_response = await self.client.receive_json()
         assert auth_response["type"] == "auth_ok"
 
-    async def send_json(self, type: str, payload: dict[str, Any]) -> dict[str, Any]:
+    async def send_json(self, msg_type: str, payload: dict[str, Any]) -> dict[str, Any]:
         self.id += 1
         await self._create_client()
-        await self.client.send_json({"id": self.id, "type": type, **payload})
+        await self.client.send_json({"id": self.id, "type": msg_type, **payload})
 
     async def receive_json(self) -> dict[str, Any]:
         return await self.client.receive_json()
 
-    async def send_and_receive_json(self, type: str, payload: dict[str, Any]) -> dict[str, Any]:
-        await self.send_json(type=type, payload=payload)
+    async def send_and_receive_json(self, msg_type: str, payload: dict[str, Any]) -> dict[str, Any]:
+        await self.send_json(type=msg_type, payload=payload)
         return await self.client.receive_json()
 
 
@@ -416,8 +416,8 @@ class MockedResponse:
 
 
 class ResponseMocker:
-    calls: list[dict[str, Any]] = []
-    responses: dict[str, MockedResponse] = {}
+    calls: List[Dict[str, Any]] = []
+    responses: Dict[str, MockedResponse] = {}
 
     def add(self, url: str, response: MockedResponse) -> None:
         self.responses[url] = response
@@ -536,7 +536,7 @@ async def client_session_proxy(hass: ha.HomeAssistant) -> ClientSession:
 
 
 def create_config_entry(
-    data: dict[str, Any] = None, options: dict[str, Any] = None
+    data: Optional[dict[str, Any]] = None, options: Optional[dict[str, Any]] = None
 ) -> MockConfigEntry:
     try:
         # Core 2024.1 added minor_version
