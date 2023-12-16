@@ -263,7 +263,6 @@ def mock_storage(data=None):
             if "data" not in mock_data or "version" not in mock_data:
                 _LOGGER.error('Mock data needs "version" and "data"')
                 raise ValueError('Mock data needs "version" and "data"')
-
             store._data = mock_data
 
         # Route through original load so that we trigger migration
@@ -295,7 +294,6 @@ def mock_storage(data=None):
         autospec=True,
     ):
         yield data
-
 
 class MockOwner(auth_models.User):
     """Mock a user in Home Assistant."""
