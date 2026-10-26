@@ -2,18 +2,23 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import contextmanager
 import functools as ft
 import json
 import os
+from contextlib import contextmanager
 from typing import Any
 
+import homeassistant.util.dt as date_util
 from aiohttp import ClientSession, ClientWebSocketResponse
 from aiohttp.typedefs import StrOrURL
-from homeassistant import auth, config_entries, core as ha
-from homeassistant.auth import auth_store, models as auth_models
+from homeassistant import auth, config_entries
+from homeassistant import core as ha
+from homeassistant.auth import auth_store
+from homeassistant.auth import models as auth_models
 from homeassistant.components.http import (
     CONFIG_SCHEMA as HTTP_CONFIG_SCHEMA,
+)
+from homeassistant.components.http import (
     async_setup as http_async_setup,
 )
 from homeassistant.const import EVENT_HOMEASSISTANT_CLOSE
@@ -23,7 +28,6 @@ from homeassistant.helpers.device_registry import DeviceRegistry
 from homeassistant.helpers.entity_registry import EntityRegistry
 from homeassistant.helpers.issue_registry import IssueRegistry
 from homeassistant.setup import async_setup_component
-import homeassistant.util.dt as date_util
 from homeassistant.util.unit_system import METRIC_SYSTEM
 from yarl import URL
 
@@ -31,7 +35,6 @@ from custom_components.hacs.base import HacsBase
 from custom_components.hacs.repositories.base import HacsManifest, HacsRepository
 from custom_components.hacs.utils.logger import LOGGER
 from custom_components.hacs.websocket import async_register_websocket_commands
-
 from tests.async_mock import AsyncMock, Mock, patch
 
 _LOGGER = LOGGER
@@ -168,8 +171,9 @@ async def async_test_home_assistant(loop, tmpdir):
     async def mock_async_start():
         """Start the mocking."""
         # We only mock time during tests and we want to track tasks
-        with patch("homeassistant.core._async_create_timer"), patch.object(
-            hass, "async_stop_track_tasks"
+        with (
+            patch("homeassistant.core._async_create_timer"),
+            patch.object(hass, "async_stop_track_tasks"),
         ):
             await orig_start()
 
@@ -234,18 +238,22 @@ def mock_storage(data=None):
         """Remove data."""
         data.pop(store.key, None)
 
-    with patch(
-        "homeassistant.helpers.storage.Store._async_load",
-        side_effect=mock_async_load,
-        autospec=True,
-    ), patch(
-        "homeassistant.helpers.storage.Store._write_data",
-        side_effect=mock_write_data,
-        autospec=True,
-    ), patch(
-        "homeassistant.helpers.storage.Store.async_remove",
-        side_effect=mock_remove,
-        autospec=True,
+    with (
+        patch(
+            "homeassistant.helpers.storage.Store._async_load",
+            side_effect=mock_async_load,
+            autospec=True,
+        ),
+        patch(
+            "homeassistant.helpers.storage.Store._write_data",
+            side_effect=mock_write_data,
+            autospec=True,
+        ),
+        patch(
+            "homeassistant.helpers.storage.Store.async_remove",
+            side_effect=mock_remove,
+            autospec=True,
+        ),
     ):
         yield data
 
@@ -256,14 +264,12 @@ class MockOwner(auth_models.User):
     def __init__(self):
         """Initialize mock user."""
         super().__init__(
-            **{
-                "is_owner": True,
-                "is_active": True,
-                "name": "Mocked Owner User",
-                "system_generated": False,
-                "groups": [],
-                "perm_lookup": None,
-            }
+            is_owner=True,
+            is_active=True,
+            name="Mocked Owner User",
+            system_generated=False,
+            groups=[],
+            perm_lookup=None,
         )
 
     @staticmethod
@@ -292,7 +298,9 @@ class WSClient:
         await async_setup_component(self.hacs.hass, "websocket_api", {})
         await self.hacs.hass.http.start()
         async_register_websocket_commands(self.hacs.hass)
-        self.client = await self.hacs.session.ws_connect("http://localhost:8123/api/websocket")
+        self.client = await self.hacs.session.ws_connect(
+            "http://localhost:8123/api/websocket"
+        )
         auth_response = await self.client.receive_json()
         assert auth_response["type"] == "auth_required"
         await self.client.send_json({"type": "auth", "access_token": self.token})
@@ -308,7 +316,9 @@ class WSClient:
     async def receive_json(self) -> dict[str, Any]:
         return await self.client.receive_json()
 
-    async def send_and_receive_json(self, type: str, payload: dict[str, Any]) -> dict[str, Any]:
+    async def send_and_receive_json(
+        self, type: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
         await self.send_json(type=type, payload=payload)
         return await self.client.receive_json()
 
