@@ -1,15 +1,19 @@
 """Set up some common test helper things."""
+
 # pytest: disable=protected-access
 import asyncio
-from dataclasses import asdict
-from glob import iglob
 import json
 import logging
 import os
+from collections.abc import Generator
+from dataclasses import asdict
+from glob import iglob
 from pathlib import Path
-from typing import Any, Generator
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+import pytest_asyncio
 from aiogithubapi import GitHub, GitHubAPI
 from aiogithubapi.const import ACCEPT_HEADERS
 from awesomeversion import AwesomeVersion
@@ -20,8 +24,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.loader import Integration
 from homeassistant.runner import HassEventLoopPolicy
-import pytest
-import pytest_asyncio
 from pytest_snapshot.plugin import Snapshot
 
 from custom_components.hacs.base import (
@@ -44,7 +46,6 @@ from custom_components.hacs.repositories import (
 from custom_components.hacs.utils.queue_manager import QueueManager
 from custom_components.hacs.utils.store import async_load_from_store
 from custom_components.hacs.validate.manager import ValidationManager
-
 from tests.common import (
     IGNORED_BASE_FILES,
     REQUEST_CONTEXT,
@@ -56,9 +57,13 @@ from tests.common import (
     client_session_proxy,
     create_config_entry,
     dummy_repository_base,
-    mock_storage as mock_storage,
     recursive_remove_key,
     safe_json_dumps,
+)
+from tests.common import (
+    mock_storage as mock_storage,
+)
+from tests.common import (
     setup_integration as common_setup_integration,
 )
 
@@ -122,7 +127,9 @@ def hass(event_loop, tmpdir):
         orig_exception_handler(loop, context)
 
     exceptions: list[Exception] = []
-    hass_obj = event_loop.run_until_complete(async_test_home_assistant(event_loop, tmpdir))
+    hass_obj = event_loop.run_until_complete(
+        async_test_home_assistant(event_loop, tmpdir)
+    )
     orig_exception_handler = event_loop.get_exception_handler()
     event_loop.set_exception_handler(exc_handle)
 
@@ -146,7 +153,11 @@ async def hacs(hass: HomeAssistant):
         hass=hass,
         pkg_path="custom_components.hacs",
         file_path=Path(hass.config.path("custom_components/hacs")),
-        manifest={"domain": DOMAIN, "version": "0.0.0", "requirements": ["hacs_frontend==1"]},
+        manifest={
+            "domain": DOMAIN,
+            "version": "0.0.0",
+            "requirements": ["hacs_frontend==1"],
+        },
     )
     hacs_obj.common = HacsCommon()
     hacs_obj.data = AsyncMock()
@@ -173,7 +184,7 @@ async def hacs(hass: HomeAssistant):
     hacs_obj.githubapi = GitHubAPI(
         token=hacs_obj.configuration.token,
         session=hacs_obj.session,
-        **{"client_name": "HACS/pytest"},
+        client_name="HACS/pytest",
     )
 
     hacs_obj.queue.clear()
@@ -274,7 +285,9 @@ def snapshots(snapshot: Snapshot) -> SnapshotFixture:
             safe_json_dumps(
                 recursive_remove_key(
                     {
-                        "directory": sorted(f for f in downloaded if f not in IGNORED_BASE_FILES),
+                        "directory": sorted(
+                            f for f in downloaded if f not in IGNORED_BASE_FILES
+                        ),
                         "data": data,
                         "hacs": {
                             "system": asdict(hacs.system),
@@ -303,7 +316,8 @@ async def proxy_session(hass: HomeAssistant) -> Generator:
     """Fixture for a proxy_session."""
     mock_session = await client_session_proxy(hass)
     with patch(
-        "homeassistant.helpers.aiohttp_client.async_get_clientsession", return_value=mock_session
+        "homeassistant.helpers.aiohttp_client.async_get_clientsession",
+        return_value=mock_session,
     ):
         yield
 
@@ -339,7 +353,9 @@ def response_mocker(proxy_session: Generator) -> ResponseMocker:
 
 @pytest_asyncio.fixture
 async def setup_integration(hass: HomeAssistant) -> None:
-    await common_setup_integration(hass, create_config_entry(options={"experimental": True}))
+    await common_setup_integration(
+        hass, create_config_entry(options={"experimental": True})
+    )
 
 
 def pytest_sessionfinish(session: pytest.Session, exitstatus: int):
@@ -365,4 +381,6 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int):
     with open("tests/output/proxy_calls.json", encoding="utf-8") as file:
         current = json.load(file)
         if current != calls:
-            raise AssertionError("API calls have changed, please run scripts/snapshot-update")
+            raise AssertionError(
+                "API calls have changed, please run scripts/snapshot-update"
+            )
